@@ -1,4 +1,4 @@
-run = "uvicorn main:app --host 0.0.0.0 --port 3000"
+run = "uvicorn main:app --host 0.0.0.0 --port 8000"
 modules = ["nix", "python-3.10"]
 
 hidden = [".pythonlibs"]
@@ -7,16 +7,9 @@ hidden = [".pythonlibs"]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 3000"]
+run = ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 8000"]
 deploymentTarget = "cloudrun"
-
-[[ports]]
-localPort = 3000
-externalPort = 3000
 
 [[ports]]
 localPort = 8000
 externalPort = 80
-
-
-

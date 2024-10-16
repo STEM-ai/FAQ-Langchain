@@ -32,28 +32,21 @@ conversation_memory = ConversationBufferMemory()
 # Define retriever as a global variable
 retriever = None
 
-# Function to calculate the hash of the document
-def calculate_file_hash(filepath):
-    hash_algo = hashlib.sha256()
-    with open(filepath, 'rb') as file:
-        while chunk := file.read(8192):
-            hash_algo.update(chunk)
-    return hash_algo.hexdigest()
-
 # Function to check if the document has changed
 def document_changed():
-    new_hash = calculate_file_hash(DOCUMENT_PATH)
+    document_mtime = os.path.getmtime(DOCUMENT_PATH1)  # Get the document's last modified time
 
-    if os.path.exists(HASH_FILE):
+    if os.path.exists(HASH_FILE):  # Reuse the HASH_FILE for storing the modification time
         with open(HASH_FILE, 'r') as f:
-            old_hash = f.read()
+            stored_mtime = f.read()
 
-        if new_hash == old_hash:
+        # If the modification time is the same, no need to reprocess the document
+        if str(document_mtime) == stored_mtime:
             return False  # Document hasn't changed
 
-    # Document has changed or HASH_FILE doesn't exist
+    # Document has changed, update the stored modification time
     with open(HASH_FILE, 'w') as f:
-        f.write(new_hash)
+        f.write(str(document_mtime))
 
     return True
 
@@ -127,15 +120,15 @@ def clear_cache():
     cache_path = ".cache/*"  # Path to the cache directory
     try:
         os.system(f"rm -rf {cache_path}")
-        logger.info(".cache directory has been cleared.")
+        #logger.info(".cache directory has been cleared.")
     except Exception as e:
-        logger.error(f"Error while clearing cache: {e}")
+        #logger.error(f"Error while clearing cache: {e}")
 
 # Function to clear both conversation memory and cache
 def reset_conversation_and_cache():
     global conversation_memory
     conversation_memory.clear()
-    logger.info("Conversation memory has been cleared.")
+    #logger.info("Conversation memory has been cleared.")
 
     # Clear cache directory
     clear_cache()
@@ -143,15 +136,13 @@ def reset_conversation_and_cache():
 # Background task to clear memory and cache every 20 minutes
 async def periodic_reset():
     while True:
-        await asyncio.sleep(20 * 60)  # Wait for 20 minutes
+        await asyncio.sleep(3600 * 6)  # Wait for 20 minutes
         reset_conversation_and_cache()
 
 @app.on_event("startup")
 async def startup_event():
     # Start the background task when the FastAPI app starts
     asyncio.create_task(periodic_reset())
-    logger.info("Started background task to clear conversation memory and cache every 20 minutes.")
-
 
 @app.post("/chat")
 async def chat(request: Request):
@@ -187,4 +178,7 @@ async def chat(request: Request):
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    logger.info("Starting the FastAPI server...")
+    port = int(os.getenv('PORT', 80))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
